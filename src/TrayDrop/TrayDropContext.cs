@@ -13,7 +13,7 @@ internal sealed class TrayDropContext : ApplicationContext
     private readonly FileLoggerProvider _logProvider;
     private readonly ILogger _logger;
     private readonly SaveLocationStore _locations;
-    private readonly DropPanel _panel;
+    private DropPanel _panel;
     private readonly Control _dispatcher = new();
     private readonly NotifyIcon _tray;
     private readonly Icon _icon;
@@ -29,13 +29,11 @@ internal sealed class TrayDropContext : ApplicationContext
         _logProvider = new FileLoggerProvider(options.DataDirectory);
         _logger = _logProvider.CreateLogger("TrayDrop");
         _server = new LocalTransferServer(_state, options, _logProvider);
-        _panel = new DropPanel(
-            _state, _logger, ShowConnection, OpenInbox, CopyConnectionLink, ShowSaveLocation,
-            () => _server.Uploads.ReceivedDirectory);
+        _panel = CreatePanel();
         _ = _dispatcher.Handle;
         _icon = NativeTheme.CreateTrayIcon();
         _menu = new ContextMenuStrip();
-        _menu.Items.Add("Open TrayDrop", null, (_, _) => _panel.ShowAtTray());
+        _menu.Items.Add("Open TrayDrop", null, (_, _) => ShowPanel());
         _menu.Items.Add("Connect a device", null, (_, _) => ShowConnection());
         _menu.Items.Add("Copy Wi-Fi link", null, (_, _) => CopyConnectionLink());
         _menu.Items.Add("Open received files", null, (_, _) => OpenInbox());
@@ -48,7 +46,7 @@ internal sealed class TrayDropContext : ApplicationContext
                 "TrayDrop", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
                 return;
             _state.ClearSharedFiles();
-            _panel.RefreshState();
+            GetPanel().RefreshState();
         });
         _menu.Items.Add(new ToolStripSeparator());
         _menu.Items.Add("Exit", null, (_, _) => ExitThread());
@@ -56,12 +54,12 @@ internal sealed class TrayDropContext : ApplicationContext
         {
             Icon = _icon, ContextMenuStrip = _menu, Text = "TrayDrop | Local file transfer", Visible = false
         };
-        _tray.MouseClick += (_, e) => { if (e.Button == MouseButtons.Left) _panel.ShowAtTray(); };
+        _tray.MouseClick += (_, e) => { if (e.Button == MouseButtons.Left) ShowPanel(); };
         _state.DevicePaired += OnDevicePaired;
         _state.FileReceived += OnFileReceived;
         _logProvider.WriteFailed += OnLogFailure;
         _activationWait = ThreadPool.RegisterWaitForSingleObject(
-            activate, (_, _) => PostToUi(_panel.ShowAtTray), null, Timeout.Infinite, executeOnlyOnce: false);
+            activate, (_, _) => PostToUi(ShowPanel), null, Timeout.Infinite, executeOnlyOnce: false);
     }
 
     public void Start()
@@ -72,6 +70,22 @@ internal sealed class TrayDropContext : ApplicationContext
             "Click the tray icon to connect a phone and drop files.", ToolTipIcon.Info);
     }
 
+    private DropPanel CreatePanel() =>
+        new(_state, _logger, ShowConnection, OpenInbox, CopyConnectionLink, ShowSaveLocation,
+            () => _server.Uploads.ReceivedDirectory);
+
+    private DropPanel GetPanel()
+    {
+        if (_panel.IsDisposed)
+        {
+            _panel = CreatePanel();
+            _logger.LogInformation("Recreated the drop panel after its previous window was disposed.");
+        }
+        return _panel;
+    }
+
+    private void ShowPanel() => GetPanel().ShowAtTray();
+
     public void ReportError(Exception exception, string message)
     {
         _logger.LogError(exception, "{Message}", message);
@@ -81,12 +95,13 @@ internal sealed class TrayDropContext : ApplicationContext
 
     private void ShowConnection()
     {
-        _panel.ShowAtTray();
+        var panel = GetPanel();
+        panel.ShowAtTray();
         using var form = new ConnectDeviceForm(
             _state, _server.Port, _preferredAddress, CopyText,
             address => _preferredAddress = address.Address.ToString());
-        form.ShowDialog(_panel);
-        _panel.RefreshState();
+        form.ShowDialog(panel);
+        GetPanel().RefreshState();
     }
 
     private void CopyConnectionLink()
@@ -124,11 +139,12 @@ internal sealed class TrayDropContext : ApplicationContext
 
     private void ShowSaveLocation()
     {
-        _panel.ShowAtTray();
+        var panel = GetPanel();
+        panel.ShowAtTray();
         using var form = new SaveLocationForm(
             _server.Uploads.ReceivedDirectory, _locations.DefaultDirectory, _locations.IsDefault, ApplySaveLocation);
-        form.ShowDialog(_panel);
-        _panel.RefreshState();
+        form.ShowDialog(panel);
+        GetPanel().RefreshState();
     }
 
     private bool ApplySaveLocation(string? customDirectory)
@@ -139,7 +155,7 @@ internal sealed class TrayDropContext : ApplicationContext
             _locations.Save(customDirectory is null ? null : directory);
             _server.Uploads.SetReceivedDirectory(directory);
             _logger.LogInformation("Updated the received-file save location.");
-            _panel.RefreshState();
+            GetPanel().RefreshState();
             return true;
         }
         catch (Exception exception) when (
@@ -164,14 +180,14 @@ internal sealed class TrayDropContext : ApplicationContext
 
     private void OnDevicePaired(DeviceInfo device) => PostToUi(() =>
     {
-        _panel.RefreshState();
+        GetPanel().RefreshState();
         _tray.ShowBalloonTip(3000, "Device connected",
             device.Name + " is ready. Select it in TrayDrop to send files.", ToolTipIcon.Info);
     });
 
     private void OnFileReceived(ReceivedFileInfo file) => PostToUi(() =>
     {
-        _panel.RefreshState();
+        GetPanel().RefreshState();
         _tray.ShowBalloonTip(3000, "File received",
             file.Name + " from " + file.DeviceName + " was saved to your inbox.", ToolTipIcon.Info);
     });

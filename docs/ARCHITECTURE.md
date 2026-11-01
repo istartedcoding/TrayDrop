@@ -228,6 +228,8 @@ Startup creates a Windows-session-scoped named mutex and activation event. A sec
 
 The floating panel is borderless, always on top, and positioned at the lower-right of the screen containing the cursor. Its logical client size is 408 by 652 pixels, with DPI scaling and work-area height adjustment. User close and Escape hide it; **Exit** in the tray menu ends the process and server.
 
+The application context caches the panel but recreates it if its previous window has been disposed. Tray clicks, menu actions, second-launch activation, and server notifications resolve the current live panel rather than retaining callbacks to a disposed form. Recreating the window does not restart Kestrel, change the pairing code, disconnect devices, remove shared files, or reset the receive folder.
+
 Server notifications marshal through a dedicated, invisible dispatcher control whose native handle lasts for the application lifetime. They do not depend on the floating panel having a window handle. This is important when the app remains in the tray while the panel is hidden or its handle has been destroyed.
 
 State mutations use a lock. Pairing and received-file notifications are raised outside that state lock. The current receive directory uses volatile reads/writes, while each upload retains its own destination snapshot.
@@ -308,7 +310,7 @@ The documented application milestone passed **47 MSTest cases**. Filename tests 
 | [UploadServiceTests.cs](../tests/TrayDrop.Tests/UploadServiceTests.cs) | Filenames, exact bytes, collisions, empty/incomplete uploads, cancellation, and destination snapshots |
 | [SaveLocationTests.cs](../tests/TrayDrop.Tests/SaveLocationTests.cs) | Defaults, persistence, reset behavior, corruption, and failed settings writes |
 | [LocalServerTests.cs](../tests/TrayDrop.Tests/LocalServerTests.cs) | Real HTTP transfers, authentication, headers, ranges, malformed requests, limits, rate limiting, and folders |
-| [WindowsInteractionTests.cs](../tests/TrayDrop.Tests/WindowsInteractionTests.cs) | Production native drag events and server notifications without the panel's handle |
+| [WindowsInteractionTests.cs](../tests/TrayDrop.Tests/WindowsInteractionTests.cs) | Production native drag events, hide/reopen behavior, disposed-panel recovery, retained phone authorization and shared files, activation, and notifications without the panel's handle |
 
 The [screenshot capture](SCREENSHOTS.md#capture-and-privacy-notes) also validated native file sharing, a byte-exact browser download, a 256 KiB upload, and an empty upload against a separate loopback-only demo server. This is not a throughput benchmark, physical-phone compatibility matrix, or security certification.
 
