@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/TrayDrop.Core/TrayDrop.Core.csproj" />
+    <Project Path="src/TrayDrop/TrayDrop.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/TrayDrop.Tests/TrayDrop.Tests.csproj" />
+  </Folder>
+</Solution>

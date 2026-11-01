@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="780" viewBox="0 0 1280 780" role="img" aria-labelledby="title description">
+  <title id="title">TrayDrop application architecture</title>
+  <desc id="description">A Windows Forms tray interface manages in-memory transfer state. An embedded ASP.NET Core server streams original files to paired browsers and saves incoming uploads to Downloads or a chosen folder. All traffic stays on the trusted local network. HTTP is not encrypted.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0 0 L8 4 L0 8 Z" fill="#b11f4b"/>
+    </marker>
+    <style>
+      text { font-family: "Segoe UI", Aptos, Calibri, sans-serif; fill: #242424; }
+      .title { font-size: 32px; font-weight: 700; }
+      .heading { font-size: 21px; font-weight: 700; }
+      .label { font-size: 15px; font-weight: 600; fill: #b11f4b; }
+      .body { font-size: 17px; }
+      .note { font-size: 15px; fill: #5c5c5c; }
+      .box { fill: #ffffff; stroke: #dedede; stroke-width: 2; }
+      .link { fill: none; stroke: #b11f4b; stroke-width: 2.5; marker-end: url(#arrow); }
+    </style>
+  </defs>
+  <rect width="1280" height="780" rx="16" fill="#f7f4ef"/>
+  <text x="32" y="55" class="title">TrayDrop architecture</text>
+  <text x="32" y="87" class="body">One Windows process. Browser-based devices. Trusted local Wi-Fi.</text>
+
+  <rect x="32" y="130" width="804" height="556" rx="16" fill="#fcfbf8" stroke="#dedede" stroke-width="2"/>
+  <text x="56" y="164" class="label">WINDOWS PC</text>
+  <rect x="56" y="188" width="260" height="170" rx="10" class="box"/>
+  <text x="76" y="224" class="heading">Windows Forms UI</text>
+  <text x="76" y="255" class="body">Tray icon + drop panel</text>
+  <text x="76" y="283" class="body">Device selection + QR</text>
+  <text x="76" y="311" class="body">Save-location settings</text>
+  <text x="76" y="339" class="note">Lifetime-owned UI dispatcher</text>
+
+  <rect x="368" y="188" width="444" height="146" rx="10" class="box"/>
+  <text x="390" y="224" class="heading">TransferState</text>
+  <text x="390" y="255" class="body">Paired devices, token hashes, heartbeats</text>
+  <text x="390" y="283" class="body">Per-device shares + download capabilities</text>
+  <text x="390" y="312" class="note">In memory; connections reset on app restart</text>
+  <path d="M316 258 H368" class="link"/>
+  <text x="340" y="240" class="note" text-anchor="middle">queue</text>
+
+  <rect x="368" y="376" width="444" height="152" rx="10" class="box"/>
+  <text x="390" y="412" class="heading">ASP.NET Core / Kestrel</text>
+  <text x="390" y="443" class="body">Embedded phone page + authenticated API</text>
+  <text x="390" y="471" class="body">Streaming uploads and ranged downloads</text>
+  <text x="390" y="501" class="note">Source subnet, Host, origin + filename checks</text>
+  <path d="M590 334 V376" class="link"/>
+  <text x="610" y="362" class="note">state + authentication</text>
+
+  <rect x="56" y="408" width="260" height="114" rx="10" class="box"/>
+  <text x="76" y="444" class="heading">Original Windows files</text>
+  <text x="76" y="474" class="body">Read when downloaded</text>
+  <text x="76" y="502" class="note">No copy, move, or deletion</text>
+  <path d="M368 453 H316" class="link"/>
+  <rect x="56" y="554" width="260" height="114" rx="10" class="box"/>
+  <text x="76" y="590" class="heading">Received-file storage</text>
+  <text x="76" y="620" class="body">Downloads or chosen folder</text>
+  <text x="76" y="648" class="note">Hidden staging; no overwrites</text>
+  <path d="M410 528 V612 H316" class="link"/>
+  <text x="433" y="584" class="note">UploadService</text>
+  <text x="433" y="610" class="note">Complete upload, then move into place</text>
+  <text x="433" y="648" class="note">settings.json + local diagnostic log</text>
+
+  <rect x="904" y="188" width="344" height="340" rx="16" class="box"/>
+  <text x="928" y="224" class="label">PHONE, TABLET, OR BROWSER</text>
+  <text x="928" y="260" class="heading">Embedded browser page</text>
+  <text x="928" y="298" class="body">Scan QR or open private link</text>
+  <text x="928" y="332" class="body">Pair and rename the device</text>
+  <text x="928" y="366" class="body">Poll file list every 5 seconds</text>
+  <text x="928" y="400" class="body">Download selected PC files</text>
+  <text x="928" y="434" class="body">Upload with progress + cancel</text>
+  <text x="928" y="481" class="note">No install, account, or external assets</text>
+  <path d="M812 420 H904" class="link"/>
+  <path d="M904 454 H812" class="link"/>
+  <text x="858" y="396" class="label" text-anchor="middle">LOCAL</text>
+  <text x="858" y="486" class="note" text-anchor="middle">HTTP</text>
+
+  <rect x="904" y="566" width="344" height="120" rx="10" fill="#ffffff" stroke="#b11f4b" stroke-width="2"/>
+  <text x="928" y="602" class="heading">Trust boundary</text>
+  <text x="928" y="633" class="body">HTTP traffic is not encrypted.</text>
+  <text x="928" y="662" class="note">Private firewall profile; no port forwarding.</text>
+  <text x="32" y="741" class="body">No cloud relay. No database. No automatic discovery of unpaired devices.</text>
+</svg>

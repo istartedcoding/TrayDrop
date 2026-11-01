@@ -1,0 +1,658 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>TrayDrop | Local file transfer</title>
+  <script>
+    (() => {
+      const param = new URLSearchParams(window.location.search).get("scoutTheme");
+      const theme =
+        param || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      document.documentElement.setAttribute("data-theme", theme);
+    })();
+  </script>
+  <style>
+    :root {
+      color-scheme: light;
+      --cp-bg: #f7f4ef;
+      --cp-bg-elevated: #fcfbf8;
+      --cp-surface: #ffffff;
+      --cp-surface-soft: #f5f5f5;
+      --cp-border: #dedede;
+      --cp-border-strong: #919191;
+      --cp-text: #242424;
+      --cp-text-muted: #5c5c5c;
+      --cp-text-soft: #6f6f6f;
+      --cp-accent: #b11f4b;
+      --cp-accent-hover: #9a1a41;
+      --cp-accent-soft: rgba(177, 31, 75, 0.08);
+      --cp-accent-fg: #ffffff;
+      --cp-success: #16a34a;
+      --cp-danger: #dc2626;
+      --cp-warning: #f59e0b;
+      --cp-link: #0078d4;
+      --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.12);
+      --cp-overlay: rgba(255, 255, 255, 0.8);
+      --cp-panel: rgba(255, 255, 255, 0.86);
+      --cp-panel-strong: rgba(255, 255, 255, 0.96);
+      --cp-sheen: rgba(255, 255, 255, 0.55);
+      --cp-highlight: rgba(177, 31, 75, 0.12);
+    }
+    html[data-theme="dark"] {
+      color-scheme: dark;
+      --cp-bg: #3d3b3a;
+      --cp-bg-elevated: #343231;
+      --cp-surface: #292929;
+      --cp-surface-soft: #2e2e2e;
+      --cp-border: #474747;
+      --cp-border-strong: #5f5f5f;
+      --cp-text: #dedede;
+      --cp-text-muted: #919191;
+      --cp-text-soft: #b0b0b0;
+      --cp-accent: #fd8ea1;
+      --cp-accent-hover: #fb7b91;
+      --cp-accent-soft: rgba(253, 142, 161, 0.14);
+      --cp-accent-fg: #1a1a1a;
+      --cp-success: #4ade80;
+      --cp-danger: #f87171;
+      --cp-warning: #fbbf24;
+      --cp-link: #4da6ff;
+      --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
+      --cp-overlay: rgba(41, 41, 41, 0.88);
+      --cp-panel: rgba(41, 41, 41, 0.72);
+      --cp-panel-strong: rgba(41, 41, 41, 0.96);
+      --cp-sheen: rgba(255, 255, 255, 0.04);
+      --cp-highlight: rgba(253, 142, 161, 0.12);
+    }
+    :root {
+      --cp-card-shadow: 0 0 2px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.14);
+    }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    body {
+      margin: 0;
+      background: var(--cp-bg);
+      color: var(--cp-text);
+      font: 16px/1.5 "Segoe UI", Aptos, Calibri, -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    button, input { font: inherit; }
+    button, .download {
+      border: 1px solid var(--cp-border);
+      border-radius: 0.625rem;
+      padding: 10px 16px;
+      background: var(--cp-surface-soft);
+      color: var(--cp-text);
+      cursor: pointer;
+      text-decoration: none;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    button:hover, .download:hover { border-color: var(--cp-border-strong); }
+    .primary, .download {
+      background: var(--cp-accent);
+      border-color: var(--cp-accent);
+      color: var(--cp-accent-fg);
+    }
+    .primary:hover, .download:hover { background: var(--cp-accent-hover); }
+    button:disabled, [aria-disabled="true"] { opacity: 0.55; cursor: not-allowed; }
+    :focus-visible { outline: 3px solid var(--cp-link); outline-offset: 3px; }
+    input {
+      width: 100%;
+      min-width: 0;
+      border: 1px solid var(--cp-border);
+      border-radius: 0.625rem;
+      padding: 10px 12px;
+      color: var(--cp-text);
+      background: var(--cp-bg-elevated);
+    }
+    main { max-width: 860px; margin: 0 auto; padding: 32px 20px 48px; }
+    header { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
+    .logo {
+      display: grid;
+      place-items: center;
+      width: 48px;
+      height: 48px;
+      border-radius: 0.625rem;
+      background: var(--cp-accent);
+      color: var(--cp-accent-fg);
+      font-weight: 750;
+      letter-spacing: -1px;
+    }
+    h1 { font-size: 24px; letter-spacing: -0.7px; margin: 0; }
+    h2 { font-size: 19px; margin: 0; letter-spacing: -0.3px; }
+    p { margin: 0; }
+    .muted, .meta { color: var(--cp-text-muted); font-size: 14px; }
+    .eyebrow { font-size: 12px; letter-spacing: 1.2px; font-weight: 700; color: var(--cp-text-soft); }
+    .card {
+      border: 1px solid var(--cp-border);
+      border-radius: 16px;
+      background: var(--cp-surface);
+      padding: 24px;
+      box-shadow: var(--cp-card-shadow);
+      margin-bottom: 16px;
+    }
+    .card-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+    .badge {
+      font-size: 12px;
+      font-weight: 650;
+      color: var(--cp-success);
+      background: var(--cp-surface-soft);
+      border: 1px solid var(--cp-border);
+      border-radius: 0.625rem;
+      padding: 4px 8px;
+    }
+    .badge.offline { color: var(--cp-text-muted); }
+    .connection-title { margin: 8px 0 4px; }
+    .connection-help { margin-bottom: 20px; }
+    label { display: block; font-size: 13px; color: var(--cp-text-muted); margin-bottom: 8px; }
+    .name-row { display: flex; gap: 8px; }
+    .name-row input { flex: 1; }
+    .connection-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .banner {
+      padding: 12px 16px;
+      border: 1px solid var(--cp-border);
+      border-left: 4px solid var(--cp-warning);
+      background: var(--cp-surface);
+      border-radius: 0.625rem;
+      margin-bottom: 16px;
+      font-size: 14px;
+    }
+    .banner.error { border-left-color: var(--cp-danger); }
+    .empty {
+      text-align: center;
+      border: 1px dashed var(--cp-border-strong);
+      border-radius: 0.625rem;
+      padding: 32px 16px;
+      background: var(--cp-bg-elevated);
+    }
+    .empty-mark { color: var(--cp-accent); font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+    .empty .muted { max-width: 340px; margin: 8px auto 0; }
+    .file-list { display: grid; gap: 12px; }
+    .file {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border: 1px solid var(--cp-border);
+      border-radius: 0.625rem;
+      padding: 16px;
+      background: var(--cp-bg-elevated);
+    }
+    .file-mark {
+      flex-shrink: 0;
+      display: grid;
+      place-items: center;
+      width: 40px;
+      height: 44px;
+      border-radius: 8px;
+      background: var(--cp-accent-soft);
+      color: var(--cp-accent);
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .file-copy { flex: 1; min-width: 0; }
+    .filename { font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
+    .file .meta { font-size: 12px; margin-top: 4px; }
+    .download { font-size: 13px; padding: 8px 12px; }
+    .section-note { margin-top: 12px; font-size: 12px; color: var(--cp-text-soft); }
+    .upload-drop {
+      border: 1px dashed var(--cp-border-strong);
+      border-radius: 0.625rem;
+      padding: 24px 16px;
+      text-align: center;
+      background: var(--cp-bg-elevated);
+    }
+    .upload-drop.dragging { border-color: var(--cp-accent); background: var(--cp-accent-soft); }
+    .upload-drop p { margin: 12px 0 0; }
+    .upload-list { display: grid; gap: 12px; margin-top: 16px; }
+    .upload-row { border-top: 1px solid var(--cp-border); padding-top: 12px; }
+    .upload-row .meta { margin: 4px 0 8px; }
+    progress { width: 100%; height: 8px; accent-color: var(--cp-accent); }
+    .upload-row.success .meta { color: var(--cp-success); }
+    .upload-row.error .meta { color: var(--cp-danger); }
+    footer { text-align: center; font-size: 12px; color: var(--cp-text-soft); margin-top: 24px; }
+    @media (max-width: 520px) {
+      main { padding: 20px 16px 32px; }
+      .card { padding: 20px 16px; }
+      .file { flex-wrap: wrap; }
+      .file .download { width: 100%; text-align: center; }
+      .name-row { flex-wrap: wrap; }
+      .name-row input { flex-basis: 100%; }
+      .name-row button { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div class="logo" aria-hidden="true">TD</div>
+      <div><h1>TrayDrop</h1><p class="muted">Your files. Your Wi-Fi. No cloud.</p></div>
+    </header>
+
+    <div id="banner" class="banner" role="status" aria-live="polite" hidden></div>
+
+    <section class="card" aria-labelledby="connectionTitle">
+      <div class="card-heading">
+        <span class="eyebrow">LOCAL CONNECTION</span>
+        <span id="connectionBadge" class="badge offline">Not connected</span>
+      </div>
+      <h2 id="connectionTitle" class="connection-title">Connect to your PC</h2>
+      <p id="connectionHelp" class="muted connection-help">Open TrayDrop on your PC and scan its QR code, or open its private connection link.</p>
+      <form id="nameForm">
+        <label for="deviceName">This device's name</label>
+        <div class="name-row">
+          <input id="deviceName" name="deviceName" maxlength="48" autocomplete="off" required>
+          <button id="renameButton" type="submit" hidden>Save name</button>
+        </div>
+      </form>
+      <div class="connection-actions">
+        <button id="connectButton" class="primary" type="button">Connect to this PC</button>
+        <button id="retryButton" type="button" hidden>Retry connection</button>
+        <button id="disconnectButton" type="button" hidden>Disconnect</button>
+      </div>
+    </section>
+
+    <section id="receiveSection" class="card" aria-labelledby="receiveTitle" hidden>
+      <div class="card-heading">
+        <h2 id="receiveTitle">From your PC</h2><span id="fileCount" class="muted">0 files</span>
+      </div>
+      <div id="emptyFiles" class="empty">
+        <div class="empty-mark" aria-hidden="true">PC &gt; YOU</div>
+        <p>Ready when you are.</p>
+        <p class="muted">Select this device in your PC's tray panel, then drop files there. They will appear here automatically.</p>
+      </div>
+      <div id="fileList" class="file-list"></div>
+      <p id="downloadHint" class="section-note" aria-live="polite">Downloads go to your browser's usual download location.</p>
+    </section>
+
+    <section id="sendSection" class="card" aria-labelledby="sendTitle" hidden>
+      <div class="card-heading"><h2 id="sendTitle">Send to your PC</h2><span class="muted">Phone &gt; PC</span></div>
+      <div id="uploadDrop" class="upload-drop">
+        <button id="chooseFiles" class="primary" type="button">Choose files to send</button>
+        <input id="fileInput" type="file" multiple hidden>
+        <p class="muted">Choose photos, documents, or any other files.</p>
+      </div>
+      <div id="uploadList" class="upload-list" aria-live="polite"></div>
+      <div class="connection-actions"><button id="cancelUpload" type="button" hidden>Cancel sending</button></div>
+      <p class="section-note">Files are streamed directly to your PC. Keep this page open and your phone awake while sending.</p>
+    </section>
+    <footer>Use trusted Wi-Fi. Local HTTP is not encrypted. Nothing is sent to a cloud service.</footer>
+  </main>
+  <script>
+    (() => {
+      "use strict";
+      const byId = (id) => document.getElementById(id);
+      const storageKey = "traydrop.session.v1";
+      const inviteCode = new URLSearchParams(location.hash.slice(1)).get("pair");
+      let session = null;
+      let connected = false;
+      let pairing = false;
+      let polling = false;
+      let uploading = false;
+      let cancelled = false;
+      let currentUpload = null;
+      let fileSignature = "";
+
+      class ApiError extends Error {
+        constructor(status, message) { super(message); this.status = status; }
+      }
+
+      function showMessage(message, error = false) {
+        const banner = byId("banner");
+        banner.textContent = message;
+        banner.className = error ? "banner error" : "banner";
+        banner.hidden = false;
+      }
+
+      function persistSession() {
+        try {
+          if (session) sessionStorage.setItem(storageKey, JSON.stringify(session));
+          else sessionStorage.removeItem(storageKey);
+        } catch (error) {
+          showMessage("Browser storage is unavailable. This tab still works, but you will need to scan the QR code again after closing it.");
+          console.warn("TrayDrop browser storage failed.", error);
+        }
+      }
+
+      function defaultName() {
+        const agent = navigator.userAgent;
+        if (/iPad/i.test(agent) || (/Macintosh/i.test(agent) && navigator.maxTouchPoints > 1)) return "iPad";
+        if (/iPhone/i.test(agent)) return "iPhone";
+        if (/Android/i.test(agent)) return "Android phone";
+        return "Browser device";
+      }
+
+      function sizeLabel(bytes) {
+        if (bytes === 0) return "0 B";
+        const units = ["B", "KB", "MB", "GB", "TB"];
+        const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+        return (bytes / Math.pow(1024, index)).toLocaleString(undefined, { maximumFractionDigits: 1 }) + " " + units[index];
+      }
+
+      async function api(path, options = {}) {
+        const headers = new Headers(options.headers);
+        if (session) headers.set("Authorization", "Bearer " + session.token);
+        const response = await fetch(path, { ...options, headers, cache: "no-store" });
+        if (!response.ok) {
+          let detail = "Request failed (" + response.status + "). Please try again.";
+          if (response.headers.get("content-type")?.includes("json")) {
+            const problem = await response.json();
+            detail = problem.detail || problem.title || detail;
+          }
+          throw new ApiError(response.status, detail);
+        }
+        return response.status === 204 ? null : response.json();
+      }
+
+      function updateConnection(isConnected) {
+        connected = isConnected;
+        const badge = byId("connectionBadge");
+        badge.textContent = isConnected ? "Connected" : session ? "Reconnecting" : "Not connected";
+        badge.className = isConnected ? "badge" : "badge offline";
+        byId("connectButton").hidden = !!session;
+        byId("connectButton").disabled = !inviteCode || pairing;
+        byId("retryButton").hidden = !session || isConnected;
+        byId("disconnectButton").hidden = !session;
+        byId("renameButton").hidden = !session;
+        byId("renameButton").disabled = !isConnected;
+        byId("receiveSection").hidden = !session;
+        byId("sendSection").hidden = !session;
+        byId("chooseFiles").disabled = !isConnected || uploading;
+        if (!session) {
+          byId("connectionTitle").textContent = "Connect to your PC";
+          byId("connectionHelp").textContent = inviteCode
+            ? "Your private connection link is ready. Connect to make this device visible in the Windows tray panel."
+            : "Open TrayDrop on your PC and scan its QR code, or open its private connection link.";
+          byId("fileList").replaceChildren();
+          fileSignature = "";
+        }
+      }
+
+      async function startDownload(file) {
+        if (!connected) {
+          showMessage("Reconnect to your PC before downloading.", true);
+          return;
+        }
+        try {
+          const check = await fetch(file.downloadUrl, { method: "HEAD", cache: "no-store" });
+          if (!check.ok) {
+            const detail = check.status === 409
+              ? "This file changed on your PC. Drop it in TrayDrop again."
+              : check.status === 410
+                ? "This file was moved or deleted on your PC. Drop it again from its current location."
+                : "This download is no longer available. Check the file in your PC's tray panel.";
+            throw new ApiError(check.status, detail);
+          }
+          const link = document.createElement("a");
+          link.href = file.downloadUrl;
+          link.download = file.name;
+          link.rel = "noreferrer";
+          document.body.append(link);
+          link.click();
+          link.remove();
+          byId("downloadHint").textContent = "Download started. Check your browser's Downloads.";
+        } catch (error) {
+          showMessage(error instanceof ApiError ? error.message : "Cannot reach your PC. Check the Wi-Fi connection and try again.", true);
+        }
+      }
+
+      function renderFiles(files) {
+        const signature = files.map(file => file.id + ":" + file.downloadRequests).join(",");
+        byId("fileCount").textContent = files.length + (files.length === 1 ? " file" : " files");
+        byId("emptyFiles").hidden = files.length > 0;
+        if (signature === fileSignature) return;
+        fileSignature = signature;
+        const rows = files.map(file => {
+          const row = document.createElement("div");
+          row.className = "file";
+          const mark = document.createElement("div");
+          mark.className = "file-mark";
+          mark.textContent = "FILE";
+          mark.setAttribute("aria-hidden", "true");
+          const copy = document.createElement("div");
+          copy.className = "file-copy";
+          const name = document.createElement("p");
+          name.className = "filename";
+          name.textContent = file.name;
+          const meta = document.createElement("p");
+          meta.className = "meta";
+          meta.textContent = sizeLabel(file.size) + " | " + new Date(file.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+          copy.append(name, meta);
+          const download = document.createElement("button");
+          download.type = "button";
+          download.className = "download";
+          download.textContent = "Download";
+          download.setAttribute("aria-label", "Download " + file.name);
+          download.addEventListener("click", () => startDownload(file));
+          row.append(mark, copy, download);
+          return row;
+        });
+        byId("fileList").replaceChildren(...rows);
+      }
+
+      async function refreshState() {
+        if (!session || polling) return;
+        polling = true;
+        try {
+          const state = await api("/api/state");
+          if (session.name !== state.device.name) {
+            session.name = state.device.name;
+            persistSession();
+          }
+          if (document.activeElement !== byId("deviceName")) byId("deviceName").value = session.name;
+          byId("connectionTitle").textContent = "Connected to " + state.computerName;
+          byId("connectionHelp").textContent = "Select \"" + state.device.name + "\" in your PC's tray panel to send files here.";
+          updateConnection(true);
+          renderFiles(state.files);
+          if (byId("banner").dataset.connectionError === "true") {
+            byId("banner").hidden = true;
+            delete byId("banner").dataset.connectionError;
+          }
+        } catch (error) {
+          if (error instanceof ApiError && error.status === 401) {
+            session = null;
+            persistSession();
+            showMessage("Your connection expired or was removed on the PC. Scan TrayDrop's QR code again.", true);
+          } else {
+            showMessage(error instanceof ApiError ? error.message : "Cannot reach your PC. Keep TrayDrop running and check that both devices are on the same Wi-Fi.", true);
+            byId("banner").dataset.connectionError = "true";
+          }
+          updateConnection(false);
+        } finally {
+          polling = false;
+        }
+      }
+
+      async function connect() {
+        if (!inviteCode || pairing) return;
+        pairing = true;
+        updateConnection(false);
+        byId("connectButton").textContent = "Connecting...";
+        try {
+          session = await api("/api/pair", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ code: inviteCode, name: byId("deviceName").value })
+          });
+          persistSession();
+          history.replaceState(null, "", location.pathname + location.search);
+          byId("banner").hidden = true;
+          await refreshState();
+        } catch (error) {
+          showMessage(error instanceof ApiError ? error.message : "Cannot reach your PC. Check that TrayDrop is running and both devices are on the same Wi-Fi.", true);
+          updateConnection(false);
+        } finally {
+          pairing = false;
+          byId("connectButton").textContent = "Connect to this PC";
+          byId("connectButton").disabled = !inviteCode;
+        }
+      }
+
+      function uploadOne(file, row) {
+        return new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          currentUpload = xhr;
+          xhr.open("POST", "/api/uploads?name=" + encodeURIComponent(file.name));
+          xhr.setRequestHeader("Authorization", "Bearer " + session.token);
+          xhr.setRequestHeader("Content-Type", "application/octet-stream");
+          const meta = row.querySelector(".meta");
+          const progress = row.querySelector("progress");
+          xhr.upload.onprogress = event => {
+            if (event.lengthComputable && event.total > 0) {
+              const percent = Math.round(event.loaded / event.total * 100);
+              progress.value = percent;
+              meta.textContent = percent === 100 ? "Saving on PC..." : "Sending " + percent + "%";
+            }
+          };
+          xhr.onload = () => {
+            currentUpload = null;
+            let data;
+            try {
+              data = JSON.parse(xhr.responseText);
+            } catch {
+              reject(new ApiError(xhr.status, "The PC returned an unreadable response. Check TrayDrop and try again."));
+              return;
+            }
+            if (xhr.status >= 200 && xhr.status < 300) {
+              progress.value = 100;
+              meta.textContent = "Saved on PC as " + data.name + " | " + sizeLabel(data.size);
+              row.className = "upload-row success";
+              resolve();
+            } else {
+              reject(new ApiError(xhr.status, data.detail || data.title || "Upload failed. Please try again."));
+            }
+          };
+          xhr.onerror = () => { currentUpload = null; reject(new ApiError(0, "Connection lost. Keep your phone awake and check Wi-Fi before trying again.")); };
+          xhr.onabort = () => { currentUpload = null; reject(new ApiError(0, "Sending cancelled. This file was not saved.")); };
+          xhr.send(file);
+        });
+      }
+
+      async function sendFiles(inputFiles) {
+        const files = Array.from(inputFiles);
+        if (files.length === 0) return;
+        if (!connected || !session) { showMessage("Connect to your PC before sending files.", true); return; }
+        if (uploading) { showMessage("Wait for the current files to finish, or cancel sending first.", true); return; }
+        uploading = true;
+        cancelled = false;
+        updateConnection(connected);
+        byId("cancelUpload").hidden = false;
+        const rows = files.map(file => {
+          const row = document.createElement("div");
+          row.className = "upload-row";
+          const name = document.createElement("p");
+          name.className = "filename";
+          name.textContent = file.name;
+          const meta = document.createElement("p");
+          meta.className = "meta";
+          meta.textContent = "Waiting | " + sizeLabel(file.size);
+          const progress = document.createElement("progress");
+          progress.max = 100;
+          progress.value = 0;
+          progress.setAttribute("aria-label", "Sending " + file.name);
+          row.append(name, meta, progress);
+          return row;
+        });
+        byId("uploadList").replaceChildren(...rows);
+        try {
+          for (let index = 0; index < files.length; index++) {
+            if (cancelled || !session) {
+              rows[index].className = "upload-row error";
+              rows[index].querySelector(".meta").textContent = "Not sent";
+              continue;
+            }
+            try {
+              await uploadOne(files[index], rows[index]);
+            } catch (error) {
+              rows[index].className = "upload-row error";
+              rows[index].querySelector(".meta").textContent = error.message;
+              showMessage(error.message, true);
+            }
+          }
+        } finally {
+          uploading = false;
+          currentUpload = null;
+          byId("cancelUpload").hidden = true;
+          byId("fileInput").value = "";
+          updateConnection(connected);
+        }
+      }
+
+      byId("connectButton").addEventListener("click", connect);
+      byId("retryButton").addEventListener("click", refreshState);
+      byId("nameForm").addEventListener("submit", async event => {
+        event.preventDefault();
+        if (!session || !connected) return;
+        try {
+          await api("/api/device", {
+            method: "PATCH", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: byId("deviceName").value })
+          });
+          showMessage("Device name updated.");
+          await refreshState();
+        } catch (error) {
+          showMessage(error instanceof ApiError ? error.message : "Cannot reach your PC. Please try again.", true);
+        }
+      });
+      byId("disconnectButton").addEventListener("click", async () => {
+        if (uploading) { showMessage("Finish or cancel sending before disconnecting.", true); return; }
+        try {
+          await api("/api/device", { method: "DELETE" });
+          session = null;
+          persistSession();
+          updateConnection(false);
+          showMessage("Disconnected. This device's shared download links have been removed.");
+        } catch (error) {
+          showMessage(error instanceof ApiError ? error.message : "Cannot reach your PC. Try disconnecting again when it is online.", true);
+        }
+      });
+      byId("chooseFiles").addEventListener("click", () => byId("fileInput").click());
+      byId("fileInput").addEventListener("change", event => sendFiles(event.target.files));
+      byId("cancelUpload").addEventListener("click", () => { cancelled = true; currentUpload?.abort(); });
+      const drop = byId("uploadDrop");
+      drop.addEventListener("dragover", event => { event.preventDefault(); if (connected) drop.classList.add("dragging"); });
+      drop.addEventListener("dragleave", () => drop.classList.remove("dragging"));
+      drop.addEventListener("drop", event => {
+        event.preventDefault();
+        drop.classList.remove("dragging");
+        sendFiles(event.dataTransfer.files);
+      });
+      document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshState(); });
+      window.addEventListener("hashchange", () => {
+        if (!new URLSearchParams(location.hash.slice(1)).has("pair")) return;
+        if (uploading) {
+          showMessage("A new connection link was opened. Finish or cancel sending, then refresh this page to connect.", true);
+          return;
+        }
+        location.reload();
+      });
+      window.addEventListener("beforeunload", event => { if (uploading) { event.preventDefault(); event.returnValue = ""; } });
+
+      async function boot() {
+        byId("deviceName").value = defaultName();
+        try {
+          const saved = sessionStorage.getItem(storageKey);
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (typeof parsed.token !== "string" || parsed.token.length !== 64 || typeof parsed.name !== "string")
+              throw new Error("Invalid saved session.");
+            session = parsed;
+            byId("deviceName").value = parsed.name;
+          }
+        } catch (error) {
+          session = null;
+          persistSession();
+          showMessage("The saved browser connection could not be restored. Scan the QR code again.", true);
+          console.warn("TrayDrop could not restore this browser session.", error);
+        }
+        updateConnection(false);
+        if (session) await refreshState();
+        if (!session && inviteCode) await connect();
+        setInterval(refreshState, 5000);
+      }
+      boot();
+    })();
+  </script>
+</body>
+</html>
