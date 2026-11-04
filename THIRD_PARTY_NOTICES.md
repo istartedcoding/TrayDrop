@@ -4,7 +4,7 @@ TrayDrop's original source and documentation are provided under the [MIT license
 
 ## Runtime components
 
-| Component | Version in the 0.1.0 Windows release | License and notices |
+| Component | Version in the 0.1.1 Windows release | License and notices |
 | --- | --- | --- |
 | QRCoder | 1.8.1 | MIT; original copyright and license text in `licenses\QRCoder-LICENSE.txt` |
 | Microsoft.NETCore.App.Runtime.win-x64 | 10.0.14 | MIT and the runtime package's third-party notices |

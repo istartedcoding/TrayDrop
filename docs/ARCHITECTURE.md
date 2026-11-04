@@ -2,13 +2,15 @@
 
 [Application overview](../README.md) | [Screenshots](SCREENSHOTS.md) | [Publishing guide](PUBLISHING.md)
 
-This document describes the implemented **0.1.0** application. Proposed extensions are explicitly marked as future work.
+This document describes the implemented **0.1.1** application. Proposed extensions are explicitly marked as future work.
 
 ## 1. System model
 
 TrayDrop is a Windows desktop application that also hosts a local web server. A phone, tablet, or other browser-equipped device connects to that server over the local network. There is no cloud relay, database, account service, or separately deployed frontend.
 
 The PC is both the coordinator and the file server. Browser devices become visible after pairing. This is not a network scanner: an unconnected browser cannot announce its presence.
+
+The optional [per-user setup script](../scripts/Install-TrayDrop.ps1) installs the published files, creates visible-launch shortcuts, and can add quiet Windows startup. It does not run inside the application, interrupt a running instance, or change the transfer protocol or network/firewall settings.
 
 ![Application architecture](images/architecture.svg)
 
@@ -302,7 +304,7 @@ Common explicit error conditions:
 
 ## 10. Verification and extension points
 
-The documented application milestone passed **47 MSTest cases**. Filename tests are data-driven, so the case count is larger than the number of test methods.
+The documented application milestone passed **54 MSTest cases**. Filename tests are data-driven, so the case count is larger than the number of test methods.
 
 | Test file | Focus |
 | --- | --- |
@@ -320,6 +322,6 @@ Likely future changes belong at these existing boundaries:
 - **Native mobile clients:** reuse the documented protocol, with explicit decisions about transport and token storage.
 - **Discovery before browser pairing:** requires a new native discovery mechanism; adapter enumeration is not peer discovery.
 - **Checksums, resumable uploads, or persistent queues:** transfer state, upload service, and API contracts.
-- **Installer, code signing, automatic startup, or updates:** desktop packaging and release tooling.
+- **MSI/MSIX installer, code signing, or automatic updates:** desktop packaging and release tooling.
 
 None of these extensions is implemented in the current milestone.
