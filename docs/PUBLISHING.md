@@ -2,7 +2,7 @@
 
 [Application overview](../README.md) | [Architecture](ARCHITECTURE.md) | [Screenshots](SCREENSHOTS.md)
 
-This is the maintainer's release guide for [istartedcoding/TrayDrop](https://github.com/istartedcoding/TrayDrop). The first downloadable milestone is [v0.1.0](https://github.com/istartedcoding/TrayDrop/releases/tag/v0.1.0). Commands below are examples for preparing and publishing a release, not instructions for downloading the app.
+This is the maintainer's release guide for [istartedcoding/TrayDrop](https://github.com/istartedcoding/TrayDrop). The current downloadable milestone is [v0.1.1](https://github.com/istartedcoding/TrayDrop/releases/tag/v0.1.1). Commands below are examples for preparing and publishing a release, not instructions for downloading the app.
 
 ## 1. Decide the public project identity
 
@@ -14,7 +14,7 @@ Suggested short description:
 
 Possible repository topics: `windows`, `winforms`, `dotnet`, `file-transfer`, `local-network`, `wifi`, `qr-code`, `aspnet-core`.
 
-The project currently declares version **0.1.0**. A first release can use `v0.1.0` and be marked **pre-release** while compatibility, installation, signing, and encrypted transport are still being developed.
+The project currently declares version **0.1.1**. Mark the release **pre-release** while compatibility, MSI/MSIX packaging, signing, and encrypted transport are still being developed.
 
 Do not describe the current app as a network-wide device scanner, encrypted file-transfer service, native mobile app, or internet-accessible sharing server.
 
@@ -38,7 +38,7 @@ Include:
 - [Architecture and API reference](ARCHITECTURE.md).
 - [Screenshot gallery](SCREENSHOTS.md) and its [images](images).
 - [Publishing guide](PUBLISHING.md).
-- [End-user guide](HOW_TO_USE.md), [release notes](releases/v0.1.0.md), [project license](../LICENSE), and [dependency notices](../THIRD_PARTY_NOTICES.md).
+- [End-user guide](HOW_TO_USE.md), [release notes](releases/v0.1.1.md), [setup script](../scripts/Install-TrayDrop.ps1), [project license](../LICENSE), and [dependency notices](../THIRD_PARTY_NOTICES.md).
 - [Desktop source](../src/TrayDrop), [core source](../src/TrayDrop.Core), and [tests](../tests/TrayDrop.Tests).
 - [Solution](../TrayDrop.slnx), [shared build settings](../Directory.Build.props), and [ignore rules](../.gitignore).
 - The original dependency license and notice texts required for binary redistribution.
@@ -65,7 +65,7 @@ dotnet build .\TrayDrop.slnx --configuration Release
 dotnet test .\tests\TrayDrop.Tests\TrayDrop.Tests.csproj --configuration Release
 ```
 
-The documented milestone passed 47 test cases, including data-driven filename cases. Run the suite again for the exact commit you plan to release.
+The documented milestone passed 54 test cases, including data-driven filename cases and 10 native Windows interaction cases. Run the suite again for the exact commit you plan to release.
 
 The phone page is embedded during the .NET build. A Node.js installation, npm dependency installation, or frontend bundling step is not required to build or run the application.
 
@@ -83,12 +83,14 @@ dotnet publish .\src\TrayDrop\TrayDrop.csproj `
   -p:EnableCompressionInSingleFile=true `
   -p:DebugType=None `
   -p:DebugSymbols=false `
-  --output .\artifacts\releases\v0.1.0\TrayDrop
+  --output .\artifacts\releases\v0.1.1\TrayDrop
 ```
 
-The resulting executable is `artifacts\releases\v0.1.0\TrayDrop\TrayDrop.exe`. A separate .NET installation is not required on the receiving PC for this self-contained build.
+The resulting executable is `artifacts\releases\v0.1.1\TrayDrop\TrayDrop.exe`. A separate .NET installation is not required on the receiving PC for this self-contained build.
 
-Add the end-user guide, project license, dependency notices, QRCoder license, and the resolved Microsoft runtime license/notice files to that portable folder. Exclude PDB files and development/test outputs, then create `TrayDrop-0.1.0-win-x64.zip` and `SHA256SUMS.txt` alongside it.
+Add the end-user guide, project license, dependency notices, QRCoder license, and the resolved Microsoft runtime license/notice files to that portable folder. Copy `scripts\Install-TrayDrop.ps1` beside `TrayDrop.exe`; its packaged mode must work without the source checkout or SDK. Exclude PDB files and development/test outputs, then create `TrayDrop-0.1.1-win-x64.zip` and `SHA256SUMS.txt` alongside it.
+
+Do not install the package, run its setup script, or launch the new executable in a session whose existing installation must remain untouched. Single-instance activation can otherwise bring the existing app forward instead of testing the new build. Use an isolated Windows user/session or another machine for manual executable checks, and record any checks not performed.
 
 Smoke-test the exact published binary:
 
@@ -122,15 +124,15 @@ Do not push secrets and then rely on deleting them in a later commit. Once commi
 Create a reviewed version tag for the intended commit, then attach the published executable to a pre-release. For example:
 
 ```powershell
-Get-FileHash -LiteralPath .\artifacts\releases\v0.1.0\TrayDrop-0.1.0-win-x64.zip -Algorithm SHA256
-gh release create v0.1.0 `
-  .\artifacts\releases\v0.1.0\TrayDrop-0.1.0-win-x64.zip `
-  .\artifacts\releases\v0.1.0\SHA256SUMS.txt `
+Get-FileHash -LiteralPath .\artifacts\releases\v0.1.1\TrayDrop-0.1.1-win-x64.zip -Algorithm SHA256
+gh release create v0.1.1 `
+  .\artifacts\releases\v0.1.1\TrayDrop-0.1.1-win-x64.zip `
+  .\artifacts\releases\v0.1.1\SHA256SUMS.txt `
   --repo istartedcoding/TrayDrop `
   --verify-tag `
-  --title "TrayDrop 0.1.0" `
+  --title "TrayDrop 0.1.1 (Windows preview)" `
   --prerelease `
-  --notes-file .\docs\releases\v0.1.0.md
+  --notes-file .\docs\releases\v0.1.1.md
 ```
 
 The example requires that the version tag has already been created and pushed, and that the portable package and its checksum file have been prepared for that exact commit. Increment the version and filenames when preparing a future release.
@@ -138,6 +140,8 @@ The example requires that the version tag has already been created and pushed, a
 Suggested release-note content:
 
 - Native Windows tray panel with file drag/drop and device selection.
+- Recovery when a previous panel was disposed, including tray clicks, activation, dialogs, and notifications.
+- Optional per-user setup with Start menu/desktop shortcuts and quiet Windows startup.
 - QR/private-link browser pairing over local Wi-Fi.
 - Two-way file transfers and per-device outgoing shares.
 - Received files default to Downloads, with a remembered custom destination.
@@ -145,10 +149,10 @@ Suggested release-note content:
 - Exact regression-test results for the released commit.
 - Supported release target: the built Windows x64 executable.
 - Security notice: HTTP is unencrypted; trusted local networks only; no port forwarding.
-- Known limitations: no installer/signing pipeline, native mobile apps, automatic unpaired-device discovery, folder transfer, automatic startup, or resumable uploads.
+- Known limitations: no MSI/MSIX installer/signing pipeline, native mobile apps, automatic unpaired-device discovery, folder transfer, automatic updates, or resumable uploads.
 - SHA-256 checksums for the actual uploaded archive and its extracted executable.
 
-The current unsigned executable may trigger Windows reputation or SmartScreen warnings. Do not instruct users to disable system security broadly. Signing and an installer are future packaging improvements, not current guarantees.
+The current unsigned executable may trigger Windows reputation or SmartScreen warnings. Do not instruct users to disable system security broadly. Signing and an MSI/MSIX installer are future packaging improvements, not current guarantees.
 
 ## 8. Final release checklist
 

@@ -16,7 +16,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <ApplicationDefaultFont>Segoe UI, 10pt</ApplicationDefaultFont>
-    <Version>0.1.0</Version>
+    <Version>0.1.1</Version>
     <Copyright>Copyright (c) 2026 Guru Gowda</Copyright>
     <RepositoryUrl>https://github.com/istartedcoding/TrayDrop</RepositoryUrl>
     <Description>Private, two-way file transfers on your local network.</Description>

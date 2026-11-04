@@ -2,13 +2,15 @@
 
 [Application overview](../README.md) | [Screenshots](SCREENSHOTS.md) | [Publishing guide](PUBLISHING.md)
 
-This document describes the implemented **0.1.0** application. Proposed extensions are explicitly marked as future work.
+This document describes the implemented **0.1.1** application. Proposed extensions are explicitly marked as future work.
 
 ## 1. System model
 
 TrayDrop is a Windows desktop application that also hosts a local web server. A phone, tablet, or other browser-equipped device connects to that server over the local network. There is no cloud relay, database, account service, or separately deployed frontend.
 
 The PC is both the coordinator and the file server. Browser devices become visible after pairing. This is not a network scanner: an unconnected browser cannot announce its presence.
+
+The optional [per-user setup script](../scripts/Install-TrayDrop.ps1) installs the published files, creates visible-launch shortcuts, and can add quiet Windows startup. It does not run inside the application, interrupt a running instance, or change the transfer protocol or network/firewall settings.
 
 ![Application architecture](images/architecture.svg)
 
@@ -228,6 +230,8 @@ Startup creates a Windows-session-scoped named mutex and activation event. A sec
 
 The floating panel is borderless, always on top, and positioned at the lower-right of the screen containing the cursor. Its logical client size is 408 by 652 pixels, with DPI scaling and work-area height adjustment. User close and Escape hide it; **Exit** in the tray menu ends the process and server.
 
+The application context caches the panel but recreates it if its previous window has been disposed. Tray clicks, menu actions, second-launch activation, and server notifications resolve the current live panel rather than retaining callbacks to a disposed form. Recreating the window does not restart Kestrel, change the pairing code, disconnect devices, remove shared files, or reset the receive folder.
+
 Server notifications marshal through a dedicated, invisible dispatcher control whose native handle lasts for the application lifetime. They do not depend on the floating panel having a window handle. This is important when the app remains in the tray while the panel is hidden or its handle has been destroyed.
 
 State mutations use a lock. Pairing and received-file notifications are raised outside that state lock. The current receive directory uses volatile reads/writes, while each upload retains its own destination snapshot.
@@ -300,7 +304,7 @@ Common explicit error conditions:
 
 ## 10. Verification and extension points
 
-The documented application milestone passed **47 MSTest cases**. Filename tests are data-driven, so the case count is larger than the number of test methods.
+The documented application milestone passed **54 MSTest cases**. Filename tests are data-driven, so the case count is larger than the number of test methods.
 
 | Test file | Focus |
 | --- | --- |
@@ -308,7 +312,7 @@ The documented application milestone passed **47 MSTest cases**. Filename tests 
 | [UploadServiceTests.cs](../tests/TrayDrop.Tests/UploadServiceTests.cs) | Filenames, exact bytes, collisions, empty/incomplete uploads, cancellation, and destination snapshots |
 | [SaveLocationTests.cs](../tests/TrayDrop.Tests/SaveLocationTests.cs) | Defaults, persistence, reset behavior, corruption, and failed settings writes |
 | [LocalServerTests.cs](../tests/TrayDrop.Tests/LocalServerTests.cs) | Real HTTP transfers, authentication, headers, ranges, malformed requests, limits, rate limiting, and folders |
-| [WindowsInteractionTests.cs](../tests/TrayDrop.Tests/WindowsInteractionTests.cs) | Production native drag events and server notifications without the panel's handle |
+| [WindowsInteractionTests.cs](../tests/TrayDrop.Tests/WindowsInteractionTests.cs) | Production native drag events, hide/reopen behavior, disposed-panel recovery, retained phone authorization and shared files, activation, and notifications without the panel's handle |
 
 The [screenshot capture](SCREENSHOTS.md#capture-and-privacy-notes) also validated native file sharing, a byte-exact browser download, a 256 KiB upload, and an empty upload against a separate loopback-only demo server. This is not a throughput benchmark, physical-phone compatibility matrix, or security certification.
 
@@ -318,6 +322,6 @@ Likely future changes belong at these existing boundaries:
 - **Native mobile clients:** reuse the documented protocol, with explicit decisions about transport and token storage.
 - **Discovery before browser pairing:** requires a new native discovery mechanism; adapter enumeration is not peer discovery.
 - **Checksums, resumable uploads, or persistent queues:** transfer state, upload service, and API contracts.
-- **Installer, code signing, automatic startup, or updates:** desktop packaging and release tooling.
+- **MSI/MSIX installer, code signing, or automatic updates:** desktop packaging and release tooling.
 
 None of these extensions is implemented in the current milestone.

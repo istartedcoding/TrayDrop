@@ -6,15 +6,17 @@ A native Windows tray app for two-way file transfers over your local network. Ph
 
 Select a connected device, drop files into a small panel above your Windows tray, and download them on your phone. Send files back from the phone page, with completed uploads saved to **Downloads** or a folder you choose.
 
-**Current release:** [0.1.0 pre-release](https://github.com/istartedcoding/TrayDrop/releases/tag/v0.1.0), a Windows-first prototype for trusted local networks, licensed under [MIT](LICENSE). The current protocol uses HTTP, not encrypted transport. This repository does not yet contain an installer or code-signing setup.
+**Current release:** [0.1.1 pre-release](https://github.com/istartedcoding/TrayDrop/releases/tag/v0.1.1), a Windows-first prototype for trusted local networks, licensed under [MIT](LICENSE). The current protocol uses HTTP, not encrypted transport. The release ZIP is portable and includes an optional per-user setup script for shortcuts and Windows startup. There is no MSI/MSIX installer or code-signing setup.
 
 ## Download for Windows
 
-**[Download TrayDrop 0.1.0 for Windows x64](https://github.com/istartedcoding/TrayDrop/releases/download/v0.1.0/TrayDrop-0.1.0-win-x64.zip)**
+**[Download TrayDrop 0.1.1 for Windows x64](https://github.com/istartedcoding/TrayDrop/releases/download/v0.1.1/TrayDrop-0.1.1-win-x64.zip)**
 
 Extract the ZIP, open its **TrayDrop** folder, and run **TrayDrop.exe** as a normal user. The self-contained release needs no separate .NET installation. It includes usage instructions and dependency notices.
 
-See [how to use](docs/HOW_TO_USE.md), [release notes](docs/releases/v0.1.0.md), and [SHA-256 checksums](https://github.com/istartedcoding/TrayDrop/releases/download/v0.1.0/SHA256SUMS.txt).
+For Start menu and desktop shortcuts, use the included **Install-TrayDrop.ps1** as described in the [usage guide](docs/HOW_TO_USE.md#optional-per-user-installation). Setup can also enable quiet startup with Windows.
+
+See [how to use](docs/HOW_TO_USE.md), [release notes](docs/releases/v0.1.1.md), and [SHA-256 checksums](https://github.com/istartedcoding/TrayDrop/releases/download/v0.1.1/SHA256SUMS.txt).
 
 **Trusted local networks only.** This unsigned pre-release uses unencrypted HTTP. Allow firewall access on Private networks only; do not expose its port to the internet.
 
@@ -73,7 +75,7 @@ See the [architecture guide](docs/ARCHITECTURE.md) for component responsibilitie
 
 ## Use the app
 
-1. Download and extract the [Windows release](https://github.com/istartedcoding/TrayDrop/releases/tag/v0.1.0), then run **TrayDrop.exe** from the extracted **TrayDrop** folder. For development, use the documented `dotnet run` command instead. The app starts in the notification area. If its rose-colored icon is hidden, expand the tray's overflow menu.
+1. If installed using the setup script, open **Start > TrayDrop** or the **TrayDrop** desktop shortcut to show the panel. Otherwise, download and extract the [Windows release](https://github.com/istartedcoding/TrayDrop/releases/tag/v0.1.1), then run **TrayDrop.exe** from the extracted **TrayDrop** folder. For development, use the documented `dotnet run` command instead. A direct launch without `--show` starts in the notification area. If its rose-colored icon is hidden, expand the tray's overflow menu.
 2. Click the tray icon. A small, always-on-top panel opens at the lower-right corner of that screen.
 3. Click **Connect a device**. Put your phone on the same Wi-Fi, then scan the QR code with its camera or open the copied private link in its browser.
 4. The phone connects automatically and appears in **Send to**. You can rename it on the phone page.
@@ -106,7 +108,7 @@ Opening the private URL pairs a browser and makes it visible in the desktop devi
 
 Pairing uses an unpredictable secret, device sessions use separate tokens, and each download has its own file-scoped capability. A device only receives the files selected for it. Request source addresses, Host headers, and browser origins are checked. Uploaded files are never executed or served as web content.
 
-**Use trusted local networks only.** HTTP traffic is not encrypted, and someone who obtains your private pairing link can connect. Do not expose the port to the internet or enable router port forwarding. This first version uses IPv4 and does not implement native mobile apps, folder transfers, automatic startup, or discovery of devices that have not opened the phone page.
+**Use trusted local networks only.** HTTP traffic is not encrypted, and someone who obtains your private pairing link can connect. Do not expose the port to the internet or enable router port forwarding. This version uses IPv4 and does not implement native mobile apps, folder transfers, or discovery of devices that have not opened the phone page.
 
 ## Build and test
 
@@ -138,6 +140,18 @@ dotnet publish .\src\TrayDrop\TrayDrop.csproj --configuration Release --runtime 
 
 The compiled phone page is embedded in the app. It is also available as the self-contained source [phone.html](src/TrayDrop.Core/Web/phone.html).
 
+### Install for your Windows user
+
+The release ZIP includes the setup script beside the executable; follow the [downloaded-release setup instructions](docs/HOW_TO_USE.md#optional-per-user-installation). From a source checkout, publish first, finish any transfers, exit an existing TrayDrop instance, then run:
+
+```powershell
+.\scripts\Install-TrayDrop.ps1 -StartWithWindows
+```
+
+The [setup script](scripts/Install-TrayDrop.ps1) copies the published app to `%LOCALAPPDATA%\Programs\TrayDrop` and creates Start menu and desktop shortcuts that open the panel. Windows sign-in starts it quietly in the tray. It requires no administrator privileges and preserves `%LOCALAPPDATA%\TrayDrop` settings and received files.
+
+Omit `-StartWithWindows` to install for manual launching and remove the setup script's existing startup shortcut. Use `-SourceDirectory` for a different self-contained publish folder. Running instances must be exited explicitly; the script does not interrupt transfers, start the app, or change network/firewall settings. Existing installations are not updated automatically. See [how to use](docs/HOW_TO_USE.md) for startup controls and network requirements.
+
 ### Command-line options
 
 | Option | Behavior |
@@ -150,7 +164,7 @@ Only one instance runs per Windows session. Opening another copy activates the r
 
 ### Verification at this milestone
 
-The latest application regression run passed **47 test cases**:
+The latest application regression run passed **54 test cases**:
 
 | Area | Cases | Examples |
 | --- | ---: | --- |
@@ -158,7 +172,7 @@ The latest application regression run passed **47 test cases**:
 | Uploads and filenames | 26 | Data-driven filename validation, byte-exact saves, duplicates, cancellation, empty files, destination changes |
 | Save-location settings | 4 | First-run Downloads, remembered custom folders, reset semantics, invalid settings, failed writes |
 | Local HTTP integration | 9 | Two-way transfers, authentication, ranges, request limits, malformed requests, rate limiting, configured folders |
-| Native Windows interaction | 3 | Production drag events, rejection of non-file drags, pairing without a panel window handle |
+| Native Windows interaction | 10 | Production drag events, hide/reopen behavior, disposed-panel recovery, activation, dialogs, and pairing/upload notifications |
 
 The documentation captures separately exercised real native file-drag events, a **63-byte browser download**, and **256 KiB plus zero-byte browser uploads** against an isolated loopback server. Downloaded and received bytes were compared with their originals. Phone screenshots use a 390-pixel mobile viewport in headless Microsoft Edge, not a physical-device compatibility certification.
 
@@ -194,7 +208,7 @@ Not implemented today:
 - Automatic discovery of devices that have not opened the connection page.
 - Encrypted transport, explicit desktop approval for every new pairing, or cryptographic transfer checksums.
 - Folder transfers, resumable uploads, or outgoing-transfer completion acknowledgements.
-- Automatic startup, an installer, signed binaries, automatic updates, or an automated release workflow.
+- An MSI/MSIX installer, signed binaries, automatic updates, or an automated release workflow. The included setup script supports optional per-user startup.
 
 These are potential future directions, not promised release features. In particular, transport encryption and a reviewed pairing model should precede use on untrusted networks.
 
